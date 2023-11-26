@@ -21,7 +21,7 @@ def generate_graph():
 
     nodes = data.get('nodes', [])
     edges = data.get('edges', [])
-    threshold = data.get('threshold', 2)
+    threshold = int(data.get('threshold', 2))
     if not nodes or not edges:
         app.logger.error('Nodes or edges are missing')
         return jsonify({'error': 'Nodes or edges are missing'}), 400
