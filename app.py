@@ -1,3 +1,5 @@
+from collections import defaultdict
+import operator
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import networkx as nx
@@ -54,26 +56,32 @@ def compute(G):
         k += 1
 
 
-def defective_coloring(G, k):
-    colors = {} 
-    for node in G.nodes():
-        available_colors = set(range(k))
-        for neighbor in G.neighbors(node):
-            if neighbor in colors:
-                available_colors.discard(colors[neighbor])
-        
-        if not available_colors:
-            return None  # No available colors
-        
-        chosen_color = min(available_colors)
-        neighbor_count_same_color = sum(1 for neighbor in G.neighbors(node) if colors.get(neighbor) == chosen_color)
-        
-        if neighbor_count_same_color > k:
-            return None  # Violates the (k, d)-coloring
-        
-        colors[node] = chosen_color
-        
-    return colors
+def defective_coloring(graph, threshold=2):
+    # Initialize all nodes with the same color (e.g., color 0)
+    colors = defaultdict(lambda: 0)
+
+    # Create a defect number map for nodes
+    defect_map = {node: sum(1 for neighbor in graph.neighbors(node) if colors[neighbor] == 0) 
+                  for node in graph.nodes()}
+
+    # Continue until no node's defect number exceeds the threshold
+    while True:
+        # Sort nodes by defect number in descending order
+        sorted_nodes = sorted(defect_map.items(), key=operator.itemgetter(1), reverse=True)
+        max_defect = sorted_nodes[0][1]
+
+        if max_defect <= threshold:
+            break
+
+        # Recolor the node with the highest defect
+        node, _ = sorted_nodes[0]
+        colors[node] += 1
+
+        # Update defect map for the node and its neighbors
+        for n in [node] + list(graph.neighbors(node)):
+            defect_map[n] = sum(1 for neighbor in graph.neighbors(n) if colors[neighbor] == colors[n])
+
+    return dict(colors)  # Convert defaultdict back to regular dict for output
 
 
 
