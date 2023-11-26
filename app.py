@@ -1,3 +1,4 @@
+
 from collections import defaultdict
 import operator
 from flask import Flask, request, jsonify
@@ -20,6 +21,7 @@ def generate_graph():
 
     nodes = data.get('nodes', [])
     edges = data.get('edges', [])
+    threshold = data.get('threshold', 2)
     if not nodes or not edges:
         app.logger.error('Nodes or edges are missing')
         return jsonify({'error': 'Nodes or edges are missing'}), 400
@@ -29,7 +31,7 @@ def generate_graph():
     G = create_graph_from_data(nodes, edges)
 
     try:
-        result = compute(G)
+        result = compute(G,threshold)
         return jsonify(result)
     except ValueError as e:
         app.logger.error('Error computing graph: %s', str(e))
@@ -47,12 +49,13 @@ def create_graph_from_data(nodes, edges):
     G.add_edges_from(edges)
     return G
 
-def compute(G):
-    k = 1
-    while True:
-        coloring = defective_coloring(G, k)
-        if coloring:
-            return {"num_colors": k, "coloring": coloring}
+def compute(G,threshold=2):
+
+    coloring = defective_coloring(G, threshold)
+    # return coloring and number of colors used
+    num_colors = max(coloring.values()) + 1
+    if coloring:
+        return {"num_colors": num_colors, "coloring": coloring}
         k += 1
 
 
