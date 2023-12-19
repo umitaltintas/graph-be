@@ -64,25 +64,37 @@ def defective_coloring(graph, threshold=2):
     colors = defaultdict(lambda: 0)
 
     # Create a defect number map for nodes
-    defect_map = {node: sum(1 for neighbor in graph.neighbors(node) if colors[neighbor] == 0) 
-                  for node in graph.nodes()}
+    defect_map = {node: len(list(graph.neighbors(node))) for node in graph.nodes()}
+
+    # Initialize variable for the max defect value
+    max_defect = max(defect_map.values())
 
     # Continue until no node's defect number exceeds the threshold
-    while True:
-        # Sort nodes by defect number in descending order
-        sorted_nodes = sorted(defect_map.items(), key=operator.itemgetter(1), reverse=True)
-        max_defect = sorted_nodes[0][1]
+    color=0
+    while max_defect > threshold:
+        # Find the node with the highest defect number
+        node = max(defect_map, key=defect_map.get)
 
-        if max_defect <= threshold:
-            break
+        # Previous color of the node
+        old_color = colors[node]
 
-        # Recolor the node with the highest defect
-        node, _ = sorted_nodes[0]
-        colors[node] += 1
+        # Recolor the node
+        colors[node] = color+1
+        color += 1
+        new_color = colors[node]
 
-        # Update defect map for the node and its neighbors
-        for n in [node] + list(graph.neighbors(node)):
-            defect_map[n] = sum(1 for neighbor in graph.neighbors(n) if colors[neighbor] == colors[n])
+        # Adjust the defect number for the recolored node
+        defect_map[node] = sum(1 for neighbor in graph.neighbors(node) if colors[neighbor] == new_color)
+
+        # Adjust the defect number for the neighbors
+        for neighbor in graph.neighbors(node):
+            if colors[neighbor] == old_color:
+                defect_map[neighbor] -= 1  # Decrease if the color was the same as the old color
+            elif colors[neighbor] == new_color:
+                defect_map[neighbor] += 1  # Increase if the color is the same as the new color
+
+        # Recalculate the max defect value
+        max_defect = max(defect_map.values())
 
     return dict(colors)  # Convert defaultdict back to regular dict for output
 
