@@ -78,8 +78,8 @@ def defective_coloring(graph, threshold=2):
         # Previous color of the node
         old_color = colors[node]
 
-        # Recolor the node
-        colors[node] = color+1
+        # Recolor the node with +1 of max neighbor color if min neighbor color is 0
+        colors[node] = max([colors[neighbor] for neighbor in graph.neighbors(node)])+1 if min([colors[neighbor] for neighbor in graph.neighbors(node)])==0 else min([colors[neighbor] for neighbor in graph.neighbors(node)])-1
         color += 1
         new_color = colors[node]
 
