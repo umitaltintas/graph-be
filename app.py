@@ -21,6 +21,7 @@ def generate_graph():
 
     nodes = data.get('nodes', [])
     edges = data.get('edges', [])
+    version = int(data.get('version', 1))
     threshold = int(data.get('threshold', 2))
     if not nodes or not edges:
         app.logger.error('Nodes or edges are missing')
@@ -31,7 +32,7 @@ def generate_graph():
     G = create_graph_from_data(nodes, edges)
 
     try:
-        result = compute(G,threshold)
+        result = compute(G,version,threshold)
         return jsonify(result)
     except ValueError as e:
         app.logger.error('Error computing graph: %s', str(e))
@@ -49,9 +50,17 @@ def create_graph_from_data(nodes, edges):
     G.add_edges_from(edges)
     return G
 
-def compute(G,threshold=2):
+def compute(G,version,threshold=2):
 
-    coloring = defective_coloring(G, threshold)
+    if version == 1:
+        coloring = defective_coloring_v1(G, threshold)
+    elif version == 2:
+        coloring = defective_coloring_v2(G, threshold)
+    elif version == 3:
+        coloring = defective_coloring_v3(G, threshold)
+    else:
+        raise ValueError('Invalid version: {}'.format(version))
+    
     # return coloring and number of colors used
     num_colors = max(coloring.values()) + 1
     if coloring:
@@ -59,7 +68,50 @@ def compute(G,threshold=2):
         k += 1
 
 
-def defective_coloring(graph, threshold=2):
+
+def defective_coloring_v1(graph, threshold=2):
+    # Initialize all nodes with the same color (e.g., color 0)
+    colors = defaultdict(lambda: 0)
+
+    # Create a defect number map for nodes
+    defect_map = {node: len(list(graph.neighbors(node))) for node in graph.nodes()}
+
+    # Initialize variable for the max defect value
+    max_defect = max(defect_map.values())
+
+    # Continue until no node's defect number exceeds the threshold
+    while max_defect > threshold:
+        # Find the node with the highest defect number
+        node = max(defect_map, key=defect_map.get)
+
+        # Previous color of the node
+        old_color = colors[node]
+
+        # Recolor the node
+        colors[node] += 1
+        new_color = colors[node]
+
+        # Adjust the defect number for the recolored node
+        defect_map[node] = sum(1 for neighbor in graph.neighbors(node) if colors[neighbor] == new_color)
+
+        # Adjust the defect number for the neighbors
+        for neighbor in graph.neighbors(node):
+            if colors[neighbor] == old_color:
+                defect_map[neighbor] -= 1  # Decrease if the color was the same as the old color
+            elif colors[neighbor] == new_color:
+                defect_map[neighbor] += 1  # Increase if the color is the same as the new color
+
+        # Recalculate the max defect value
+        max_defect = max(defect_map.values())
+
+    return dict(colors)  # Convert defaultdict back to regular dict for output
+
+
+
+
+
+
+def defective_coloring_v2(graph, threshold=2):
     # Initialize all nodes with the same color (e.g., color 0)
     colors = defaultdict(lambda: 0)
 
@@ -97,6 +149,47 @@ def defective_coloring(graph, threshold=2):
         max_defect = max(defect_map.values())
 
     return dict(colors)  # Convert defaultdict back to regular dict for output
+
+
+
+
+
+def get_smallest_available_color(bitmap):
+    for color in range(len(bitmap)):
+        if not bitmap[color]:
+            return color
+    return len(bitmap)
+
+def defective_coloring_v3(graph, threshold=2):
+    colors = defaultdict(lambda: 0)
+    bitmaps = {node: [False] * len(graph.nodes()) for node in graph.nodes()}
+    defect_map = {node: len(list(graph.neighbors(node))) for node in graph.nodes()}
+    max_defect = max(defect_map.values())
+
+    while max_defect > threshold:
+        node = max(defect_map, key=defect_map.get)
+        old_color = colors[node]
+
+        # Find smallest available color
+        new_color = get_smallest_available_color(bitmaps[node])
+        colors[node] = new_color
+
+        # Update bitmap for the node and its neighbors
+        bitmaps[node][new_color] = True
+        for neighbor in graph.neighbors(node):
+            bitmaps[neighbor][new_color] = True
+
+            if colors[neighbor] == old_color:
+                defect_map[neighbor] -= 1
+            elif colors[neighbor] == new_color:
+                defect_map[neighbor] += 1
+
+        defect_map[node] = sum(1 for neighbor in graph.neighbors(node) if colors[neighbor] == new_color)
+        max_defect = max(defect_map.values())
+
+    return dict(colors)
+
+
 
 
 
