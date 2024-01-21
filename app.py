@@ -53,11 +53,11 @@ def create_graph_from_data(nodes, edges):
 def compute(G,version,threshold=2):
 
     if version == 1:
-        coloring = defective_coloring_v1(G, threshold)
+        coloring = basic_alg(G, threshold)
     elif version == 2:
         coloring = defective_coloring_v2(G, threshold)
     elif version == 3:
-        coloring = defective_coloring_v3(G, threshold)
+        coloring = MDIC(G, threshold)
     else:
         raise ValueError('Invalid version: {}'.format(version))
     
@@ -69,7 +69,7 @@ def compute(G,version,threshold=2):
 
 
 
-def defective_coloring_v1(graph, threshold=2):
+def basic_alg(graph, threshold=2):
     # Initialize all nodes with the same color (e.g., color 0)
     colors = defaultdict(lambda: 0)
 
@@ -160,7 +160,7 @@ def get_smallest_available_color(bitmap):
             return color
     return len(bitmap)
 
-def defective_coloring_v3(graph, threshold=2):
+def MDIC(graph, threshold=2):
     colors = defaultdict(lambda: 0)
     bitmaps = {node: [False] * len(graph.nodes()) for node in graph.nodes()}
     defect_map = {node: len(list(graph.neighbors(node))) for node in graph.nodes()}
